@@ -64,6 +64,28 @@ canvas.map{display:block;width:100%;height:auto}
 .dpad button:active{transform:translateY(3px);box-shadow:0 1px 0 #361636}
 .act{width:104px;height:104px;border-radius:50%;background:var(--accent);font-size:17px;font-weight:900;box-shadow:0 5px 0 #b86f12}
 .act:active{transform:translateY(3px);box-shadow:0 2px 0 #b86f12}
+/* ===== mobile full-screen play ===== */
+body.mplay{overflow:hidden;position:fixed;inset:0;width:100%}
+body.mplay header.top,body.mplay .foot{display:none}
+body.mplay .wrap{padding:0;max-width:none}
+.mgame{position:fixed;inset:0;height:100vh;height:100dvh;background:#241c31;z-index:5;touch-action:none;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.mgame canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mtop{position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:8px;right:8px;display:flex;gap:6px;justify-content:space-between;align-items:center;pointer-events:none}
+.mtop .grp{display:flex;gap:6px;pointer-events:auto}
+.mtop .pill{padding:5px 10px;font-size:13.5px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.mtop button.pill{font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;color:var(--brand)}
+.mctl{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:space-between;align-items:flex-end;padding:0 14px;pointer-events:none}
+.mctl>*{pointer-events:auto}
+.mctl .dpad{grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:5px}
+.mctl .dpad button{background:rgba(82,36,82,.78);box-shadow:0 4px 0 rgba(40,15,40,.7);backdrop-filter:blur(2px)}
+.mctl .act{width:96px;height:96px;background:rgba(218,116,130,.92);box-shadow:0 5px 0 #a8495a;font-size:16px}
+.mgame .prompt{bottom:calc(env(safe-area-inset-bottom) + 210px);font-size:13.5px;white-space:normal;max-width:86vw;text-align:center}
+.drawer{position:absolute;inset:0;background:rgba(30,20,45,.45);display:none;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top) + 56px) 12px 12px;z-index:6}
+.drawer.open{display:flex}
+.drawer .panel{width:100%;max-width:440px;max-height:75vh;overflow:auto}
+.drawer h3{justify-content:space-between}
+.drawer h3 button{font:inherit;border:0;background:var(--brand);color:#fff;border-radius:10px;padding:4px 10px;font-weight:800;cursor:pointer}
+@media (orientation:landscape){.mctl .dpad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px)}.mctl .act{width:84px;height:84px}.mgame .prompt{bottom:calc(env(safe-area-inset-bottom) + 18px)}}
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(30,20,45,.5);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
 .modal.show{display:flex}
@@ -660,8 +682,25 @@ const Music=(()=>{
     while(next<ac.currentTime+.15){play(step,next,sx);next+=sx;step++;}
   }
   function fade(to,d){if(!ac)return;const g=master.gain;g.cancelScheduledValues(ac.currentTime);g.setValueAtTime(g.value,ac.currentTime);g.linearRampToValueAtTime(to,ac.currentTime+(d||.4));}
+  let unlocked=false,silentEl=null;
+  function silentWav(){const sr=8000,n=sr/2,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+    w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+    return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));}
+  function unlock(){
+    if(!on)return;
+    try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+    init();if(!ac)return;
+    if(ac.state!=='running'){try{ac.resume();}catch(e){}}
+    if(!unlocked){unlocked=true;
+      try{const b=ac.createBuffer(1,1,22050),src=ac.createBufferSource();src.buffer=b;src.connect(ac.destination);src.start(0);}catch(e){}
+      // iPhone: a looping silent media element moves audio to the "playback" channel so the ring/silent switch doesn't mute the music
+      try{if(!navigator.audioSession){silentEl=document.createElement('audio');silentEl.src=silentWav();silentEl.loop=true;silentEl.setAttribute('playsinline','');silentEl.volume=.01;const p=silentEl.play();p&&p.catch(()=>{});}}catch(e){}
+    } else if(silentEl&&silentEl.paused){const p=silentEl.play();p&&p.catch(()=>{});}
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ac&&playing&&ac.state!=='running'){try{ac.resume()}catch(e){}}});
   return{
-    start(){if(!on)return;init();if(!ac)return;ac.resume&&ac.resume();if(playing)return;playing=true;step=0;next=ac.currentTime+.1;timer=setInterval(sched,25);fade(.55,1.2);},
+    unlock,
+    start(){unlock();if(!on)return;init();if(!ac)return;ac.resume&&ac.resume();if(playing)return;playing=true;step=0;next=ac.currentTime+.1;timer=setInterval(sched,25);fade(.55,1.2);},
     stop(d){if(!ac||!playing)return;playing=false;fade(0,d||.6);setTimeout(()=>{if(!playing)clearInterval(timer)},(d||.6)*1000+60);},
     duck(x){if(!ac||!playing)return;fade(x?.2:.55,.25);},
     tension(v){tension=Math.max(0,Math.min(1,v));},
@@ -674,9 +713,10 @@ const Music=(()=>{
     get on(){return on},get playing(){return playing}
   };
 })();
-function updMuteBtn(){const b=$('#mute');if(b)b.textContent=Music.on?'🔊 Music':'🔇 Music';}
+function updMuteBtn(){const b=$('#mute');if(b)b.textContent=Music.on?'🔊 Music':'🔇 Music';const m=$('#mmute');if(m)m.textContent=Music.on?'🔊':'🔇';}
 $('#mute').onclick=()=>{const on=Music.toggle();updMuteBtn();if(on&&S&&S.running&&!S.ended)Music.start();};
 updMuteBtn();
+['pointerdown','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,()=>Music.unlock(),{passive:true,capture:true}));
 
 /* ===================== STATE & DIALOG ===================== */
 let S=null,raf=null,keys={},lastTick=0,dlgOpen=false;
@@ -808,6 +848,7 @@ function wifeCall(){
 }
 
 /* ===================== ENGINE ===================== */
+function isMobile(){try{return (matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<900)||innerWidth<760;}catch(e){return innerWidth<760}}
 let cv,ctx,light,lctx,parts=[],rain=[];
 const STEP_MS=150;
 function start(i){
@@ -817,25 +858,49 @@ function start(i){
   S.npcs=sc.npcs().map(n=>({...n,fx:n.x,fy:n.y,dir:'d',phase:0}));
   STATIC=renderStatic(sc.mode);
   $('#hud').style.display='flex';
-  app.innerHTML=`<div class="game"><div><div class="stage"><canvas class="map" id="cv"></canvas><div class="prompt" id="prompt"></div></div>
+  S.mobile=isMobile();
+  if(S.mobile){
+    document.body.classList.add('mplay');
+    app.innerHTML=`<div class="mgame" id="mgame"><canvas class="map" id="cv"></canvas>
+     <div class="mtop"><div class="grp"><div class="pill clock">🕑 <b id="mclk">00:00</b></div><div class="pill">⭐ <b id="mscore">0</b></div></div>
+     <div class="grp"><button class="pill" id="mchk">📋 <span id="mchkn">0/0</span></button><button class="pill" id="mmute">🔊</button><button class="pill" id="mquit">✕</button></div></div>
+     <div class="prompt" id="prompt"></div>
+     <div class="mctl"><div class="dpad"><span></span><button data-d="u">▲</button><span></span><button data-d="l">◀</button><span></span><button data-d="r">▶</button><span></span><button data-d="d">▼</button><span></span></div><button class="act" id="act">✋ Use</button></div>
+     <div class="drawer" id="drawer"><div class="panel"><h3>📋 Policy checklist <button id="dclose">Close</button></h3><ul class="check" id="chk"></ul></div></div></div>`;
+    $('#mchk').onclick=()=>$('#drawer').classList.add('open');
+    $('#dclose').onclick=()=>$('#drawer').classList.remove('open');
+    $('#drawer').onclick=e=>{if(e.target.id==='drawer')$('#drawer').classList.remove('open')};
+    $('#mquit').onclick=home;
+    $('#mmute').onclick=()=>{const on=Music.toggle();updMuteBtn();if(on&&S&&S.running&&!S.ended)Music.start();};
+  } else {
+    app.innerHTML=`<div class="game"><div><div class="stage"><canvas class="map" id="cv"></canvas><div class="prompt" id="prompt"></div></div>
    <div class="controls"><div class="dpad"><span></span><button data-d="u">▲</button><span></span><button data-d="l">◀</button><span></span><button data-d="r">▶</button><span></span><button data-d="d">▼</button><span></span></div><button class="act" id="act">✋ Use</button></div></div>
    <div class="side"><div class="panel"><h3>📋 Policy checklist</h3><ul class="check" id="chk"></ul></div>
    <div class="panel howto"><h3>🎮 How to play</h3><div class="keys"><span class="key">▲</span><span class="key">◀</span><span class="key">▼</span><span class="key">▶</span> or <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to walk</div><div class="keys"><span class="key">Space</span> or <span class="key">E</span> to talk / use</div>Walk into a room to search it. People with a <b style="color:var(--accent)">!</b> have something to say. The <b>desk</b> at the nurses' station has the record and the phone.</div></div></div>`;
-  cv=$('#cv');cv.width=W*T*DPR;cv.height=H*T*DPR;ctx=cv.getContext('2d');
+  }
+  cv=$('#cv');ctx=cv.getContext('2d');fitCanvas();
   light=document.createElement('canvas');light.width=W*T;light.height=H*T;lctx=light.getContext('2d');
   rain=Array.from({length:140},()=>({x:Math.random()*W*T,y:Math.random()*H*T,s:4+Math.random()*3}));
   document.querySelectorAll('.dpad button').forEach(b=>{const d=b.dataset.d;
     const on=e=>{e.preventDefault();keys['pad'+d]=1;};const off=e=>{e.preventDefault();keys['pad'+d]=0};
-    b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);});
+    b.addEventListener('pointerdown',on);b.addEventListener('contextmenu',e=>e.preventDefault());b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);});
   $('#act').onclick=interact;
   renderSide();
   const b=sc.brief;const HH=HERO();dialog({who:b.who,name:b.name,role:b.role,mood:b.mood,text:b.text.replace("<b>You're the Nurse in Charge.</b>",'<b>'+HH.name+', you\'re in charge tonight.</b>')+'<br><br><span style="color:var(--muted);font-size:14px">🦸 Playing as <b>'+HH.name+'</b>, '+HH.tag+'. Special skill: '+HH.skill.toLowerCase()+'.</span>',opts:[{t:'<b>Start the clock ▶</b>',fn:()=>{S.running=true;lastTick=performance.now();Music.start();}}]});
   cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
 }
+function fitCanvas(){
+  if(!cv)return;
+  if(S&&S.mobile){const w=cv.clientWidth||innerWidth,h=cv.clientHeight||innerHeight;cv.width=Math.round(w*DPR);cv.height=Math.round(h*DPR);}
+  else{cv.width=W*T*DPR;cv.height=H*T*DPR;}
+}
+addEventListener('resize',()=>{if(S&&S.mobile)fitCanvas();});
+addEventListener('orientationchange',()=>setTimeout(()=>{if(S&&S.mobile)fitCanvas();},250));
 function renderSide(){
   if(!S)return;const el=$('#chk');if(!el)return;
   el.innerHTML=S.check.map(c=>`<li class="${c.done?'done':''}"><span class="bx">${c.done?'✓':''}</span><span><span class="t">${c.label}</span>${c.done?`<small>Done at ${addMins(S.sc.start,c.at)}</small>`:c.hint?`<small>${c.hint}</small>`:''}</span></li>`).join('');
   $('#score').textContent=S.score;
+  const n=$('#mchkn');if(n)n.textContent=S.check.filter(c=>c.done).length+'/'+S.check.length;
 }
 const MSPERMIN=1500;
 function blocked(nx,ny){
@@ -860,6 +925,7 @@ function loop(now){
   S.npcs.forEach(n=>{if(n.tx!=null){n.mv=Math.min(1,(n.mv||0)+dt/STEP_MS);n.fx=n.ox+(n.tx-n.ox)*n.mv;n.fy=n.oy+(n.ty-n.oy)*n.mv;n.phase+=dt/STEP_MS*Math.PI;if(n.mv>=1){n.tx=null;n.moving=false}}});
   draw(now);
   $('#clk').textContent=addMins(S.sc.start,S.mins);$('#elapsed').textContent=S.mins;$('#score').textContent=S.score;
+  const mc=$('#mclk');if(mc){mc.textContent=addMins(S.sc.start,S.mins);$('#mscore').textContent=S.score;}
 }
 function onMove(){
   const z=zoneAt(S.x,S.y);
@@ -893,7 +959,17 @@ function burst(){if(!S)return;for(let i=0;i<16;i++)parts.push({x:S.fx*T+T/2,y:S.
 
 /* ===================== DRAW ===================== */
 function draw(now){
-  const c=ctx;c.setTransform(DPR,0,0,DPR,0,0);
+  const c=ctx;
+  if(S.mobile){
+    if(cv.clientWidth&&(Math.abs(cv.width-Math.round(cv.clientWidth*DPR))>2||Math.abs(cv.height-Math.round(cv.clientHeight*DPR))>2))fitCanvas();
+    const cw=cv.width/DPR,ch=cv.height/DPR;
+    const sc=cw<ch?cw/(10.5*T):ch/(9.5*T),vw=cw/sc,vh=ch/sc;
+    const cx=S.fx*T+T/2,cy=S.fy*T+T/2;
+    const camX=vw>=W*T?-(vw-W*T)/2:Math.max(0,Math.min(W*T-vw,cx-vw/2));
+    const camY=vh>=H*T?-(vh-H*T)/2:Math.max(0,Math.min(H*T-vh,cy-vh/2));
+    c.setTransform(1,0,0,1,0,0);c.fillStyle='#241c31';c.fillRect(0,0,cv.width,cv.height);
+    c.setTransform(DPR*sc,0,0,DPR*sc,-camX*DPR*sc,-camY*DPR*sc);
+  } else c.setTransform(DPR,0,0,DPR,0,0);
   c.drawImage(STATIC,0,0,W*T,H*T);
   // pond shimmer
   c.save();c.globalAlpha=.35;c.strokeStyle='#fff';c.lineWidth=1.2;const pr=(now/600)%1;ell(c,29*T,10*T,6+pr*14,3+pr*6);c.globalAlpha=.4*(1-pr);c.stroke();c.restore();
@@ -957,7 +1033,7 @@ function heroCanvas(mode,crop){
   return {cvs,c,st};
 }
 function home(){
-  if(S){S.ended=true}Music.stop(.4);cancelAnimationFrame(raf);S=null;$('#hud').style.display='none';closeDlg();
+  if(S){S.ended=true}Music.stop(.4);cancelAnimationFrame(raf);S=null;document.body.classList.remove('mplay');$('#hud').style.display='none';closeDlg();
   app.innerHTML=`<div class="hero" id="hero"><div class="ov"><span class="badge">The NI Hospice Missing Person Policy: now playable!</span><h1>Code <span>Missing</span></h1><p>It's the policy you know and love, now with a ticking clock, dramatic music and a surprising number of towels. Pick your consultant and take charge. Search the hospice, question everyone, work that phone and get your patient home safely.</p><p style="font-size:14px;opacity:.9;margin-top:10px">📜 Policy freshly updated by <b>Dr Matthew Doré</b> on 11 November 2026 · 🔊 Sound on for the full drama</p></div></div>
   <div class="pick"><h2>🦸 Choose your consultant</h2><div class="heroes" id="heroes"></div></div>
   <h2 class="sec">🗺️ Choose your shift</h2>
@@ -988,7 +1064,7 @@ function renderHeroes(){
 $('#quit').onclick=home;
 
 function endGame(){
-  S.ended=true;S.running=false;closeDlg();cancelAnimationFrame(raf);Music.stop(.3);setTimeout(()=>Music.stinger('end'),350);
+  S.ended=true;S.running=false;closeDlg();cancelAnimationFrame(raf);document.body.classList.remove('mplay');Music.stop(.3);setTimeout(()=>Music.stinger('end'),350);
   const max=S.check.reduce((a,c)=>a+c.pts,0);const pct=S.score/max;const n=pct>=.85?3:pct>=.6?2:pct>=.3?1:0;
   const prev=best[S.sc.id];if(prev==null||n>prev){best[S.sc.id]=n;try{localStorage.setItem('codeMissingNIH',JSON.stringify(best))}catch(e){}}
   const msgs=['Time for a refresher. Have another go.','Getting there. Some steps were missed or came too late.','Solid shift. Almost everything by the book.','Outstanding. Calm, quick and right by the policy.'];
