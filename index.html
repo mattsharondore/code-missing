@@ -353,7 +353,7 @@ const ICONS={
 /* ===================== CONSULTANTS ===================== */
 const HEROES=[
  {id:'matt',name:'Dr Matthew Doré',tag:'Rogue bald Consultant',skill:'Messy handwriting, but a big heart',stat:'Awesomeness: extreme'},
- {id:'clare',name:'Dr Clare White',tag:'Blonde bombshell Consultant',skill:'Glamourous and Compassionate',stat:'Glamour: off the chart'},
+ {id:'clare',name:'Dr Clare White',tag:'Blonde bombshell Consultant',skill:'Glamorous and compassionate',stat:'Glamour: off the chart'},
  {id:'desi',name:'Dr Desi Karakitsiou',tag:'Greek Genius Consultant',skill:'Plato and Apollo combined',stat:'IQ: Pythagorean'},
  {id:'sarah',name:'Dr Sarah Gilmore',tag:'Curly haired Consultant',skill:'Kindness and bouncy curly hair personified',stat:'Bounce: maximum'},
 ];
@@ -903,7 +903,7 @@ function start(i){
   $('#act').onclick=interact;
   bindTouch();
   renderSide();
-  const b=sc.brief;const HH=HERO();dialog({who:b.who,name:b.name,role:b.role,mood:b.mood,text:b.text.replace("<b>You're the Nurse in Charge.</b>",'<b>'+HH.name+', you\'re in charge tonight.</b>')+'<br><br><span style="color:var(--muted);font-size:14px">🦸 Playing as <b>'+HH.name+'</b>, '+HH.tag+'. Special skill: '+HH.skill.toLowerCase()+'.</span><br><a href="'+POLICY_URL+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-weight:800;color:var(--brand)">📄 Read the full Missing Patient policy (PDF)</a> <span class="pend">Pending clinical leads</span>',opts:[{t:'<b>Start the clock ▶</b>',fn:()=>{S.running=true;lastTick=performance.now();Music.start();setTimeout(()=>{const h=$('#mhint');h&&h.classList.add('fade')},9000);}}]});
+  const b=sc.brief;const HH=HERO();dialog({who:b.who,name:b.name,role:b.role,mood:b.mood,text:b.text.replace("<b>You're the Nurse in Charge.</b>",'<b>'+HH.name+', you\'re in charge tonight.</b>')+'<br><br><span style="color:var(--muted);font-size:14px">🦸 Playing as <b>'+HH.name+'</b>, '+HH.tag+'. Special skill: '+HH.skill+'.</span>',opts:[{t:'<b>Start the clock ▶</b>',fn:()=>{S.running=true;lastTick=performance.now();Music.start();setTimeout(()=>{const h=$('#mhint');h&&h.classList.add('fade')},9000);}}]});
   cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
 }
 function fitCanvas(){
@@ -1104,7 +1104,7 @@ function home(){
   <div class="pick"><h2>🦸 Choose your consultant</h2><div class="heroes" id="heroes"></div></div>
   <h2 class="sec">🗺️ Choose your shift</h2>
   <div class="shifts" id="shifts"></div>
-  <div class="credit"><img alt="Northern Ireland Hospice" src="${LOGO_SRC}"><div><b>Based on the Northern Ireland Hospice <i>Missing Patient in Adult Services</i> policy</b><br>Lovingly updated by Dr Matthew Doré, 11 November 2026. No patients were actually misplaced in the making of this game.</div><a class="polbtn" href="${POLICY_URL}" target="_blank" rel="noopener">📄 Read the policy (PDF)</a></div>
+  <div class="credit"><img alt="Northern Ireland Hospice" src="${LOGO_SRC}"><div><b>Based on the Northern Ireland Hospice <i>Missing Patient in Adult Services</i> policy</b><br>Lovingly updated by Dr Matthew Doré, 11 November 2026. No patients were actually misplaced in the making of this game.</div></div>
   <div class="polbox"><div class="txt"><b class="h">📄 Before you play: read the real thing</b>The full <i>Missing Patient in Adult Services</i> policy is the document you're actually expected to follow. The game just helps it stick. <span class="pend">Pending clinical leads' approval</span></div><a class="polbtn" href="${POLICY_URL}" target="_blank" rel="noopener">Open the policy PDF</a></div>
   <div class="how"><div><b>🚶 Walk</b>Arrow keys, WASD, or the on-screen pad on a phone or tablet</div><div><b>✋ Talk &amp; use</b>Press Space or E next to people, or next to the desk at the nurses' station</div><div><b>🔍 Search</b>Walk into a room to search it. Its label turns green.</div><div><b>⏱ Beat the clock</b>One game minute passes every 1.5 seconds. Every decision counts.</div></div>`;
   // hero art: full map with characters
