@@ -353,9 +353,9 @@ const ICONS={
 /* ===================== CONSULTANTS ===================== */
 const HEROES=[
  {id:'matt',name:'Dr Matthew Doré',tag:'Rogue bald Consultant',skill:'Messy handwriting, but a big heart',stat:'Awesomeness: extreme'},
- {id:'clare',name:'Dr Clare White',tag:'Blonde bombshell Consultant',skill:'Finds anyone before the kettle boils',stat:'Glamour: off the chart'},
- {id:'desi',name:'Desi Karakitsiou',tag:'Greek Genius Consultant',skill:'Solves it with ancient geometry',stat:'IQ: Pythagorean'},
- {id:'sarah',name:'Dr Sarah Gilmore',tag:'Curly haired Consultant',skill:'Curls detect patients at 50 metres',stat:'Bounce: maximum'},
+ {id:'clare',name:'Dr Clare White',tag:'Blonde bombshell Consultant',skill:'Glamourous and Compassionate',stat:'Glamour: off the chart'},
+ {id:'desi',name:'Dr Desi Karakitsiou',tag:'Greek Genius Consultant',skill:'Plato and Apollo combined',stat:'IQ: Pythagorean'},
+ {id:'sarah',name:'Dr Sarah Gilmore',tag:'Curly haired Consultant',skill:'Kindness and bouncy curly hair personified',stat:'Bounce: maximum'},
 ];
 let HERO_ID='matt';try{const h=localStorage.getItem('codeMissingHero');if(HEROES.some(x=>x.id===h))HERO_ID=h;}catch(e){}
 const HERO=()=>HEROES.find(h=>h.id===HERO_ID);
